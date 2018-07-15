@@ -16,10 +16,21 @@ build-type:          Simple
 extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
 
-executable parallel-and-concurrent-programming-in-haskell
-  main-is:             Main.hs
-  -- other-modules:
-  -- other-extensions:
+library
   build-depends:       base >=4.8 && <4.9
+                     , array
+                     , time
   hs-source-dirs:      src
+  exposed-modules:     Sudoku
   default-language:    Haskell2010
+
+executable sudoku
+  main-is:             Main.hs
+  ghc-options:         -O2 -Wall -Werror -threaded
+  build-depends:       base >=4.8 && <4.9
+                     , deepseq
+                     , parallel
+                     , parallel-and-concurrent-programming-in-haskell
+  hs-source-dirs:      sudoku
+  default-language:    Haskell2010
+
