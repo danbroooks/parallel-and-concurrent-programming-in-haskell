@@ -1,0 +1,25 @@
+-- Initial parallel-and-concurrent-programming-in-haskell.cabal generated
+-- by cabal init.  For further documentation, see
+-- http://haskell.org/cabal/users-guide/
+
+name:                parallel-and-concurrent-programming-in-haskell
+version:             0.1.0.0
+-- synopsis:
+-- description:
+license:             MIT
+license-file:        LICENSE
+author:              Dan Brooks
+maintainer:          dmbrooks@live.co.uk
+-- copyright:
+-- category:
+build-type:          Simple
+extra-source-files:  ChangeLog.md
+cabal-version:       >=1.10
+
+executable parallel-and-concurrent-programming-in-haskell
+  main-is:             Main.hs
+  -- other-modules:
+  -- other-extensions:
+  build-depends:       base >=4.8 && <4.9
+  hs-source-dirs:      src
+  default-language:    Haskell2010
