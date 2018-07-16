@@ -1,8 +1,7 @@
 module Main where
 
-import           Control.DeepSeq
 import           Control.Monad
-import           Control.Parallel.Strategies
+import           Control.Parallel.Strategies hiding (parMap)
 import qualified Data.Maybe as M
 import           Data.Monoid ((<>))
 import           Sudoku
@@ -42,24 +41,28 @@ main = do
         _ -> Nothing
 
 sudoku :: ExecutionMode -> String -> IO ()
-sudoku execMode filepath = determineMode
+sudoku execMode filepath = readPuzzles >>= displayResults . determineMode
   where
     determineMode =
       case execMode of
         ExecPar -> runParallel
         ExecSeq -> runSequential
 
-    runParallel = do
-      (as, bs) <- (\p -> splitAt (length p `div` 2) p) . lines <$> readFile ("sudoku/data/" <> filepath)
-      print . length . filter M.isJust . runEval $ do
-        as' <- rpar (force (map solve as))
-        bs' <- rpar (force (map solve bs))
-        _ <- rseq as'
-        _ <- rseq bs'
-        return (as' ++ bs')
-      return ()
+    runParallel =
+      runEval . parMap solve
 
-    runSequential = do
-      puzzles <- lines <$> readFile ("sudoku/data/" <> filepath)
-      print . length . filter M.isJust $ solve <$> puzzles
-      return ()
+    runSequential=
+      fmap solve
+
+    displayResults =
+      print . length . filter M.isJust
+
+    readPuzzles =
+      lines <$> readFile ("sudoku/data/" <> filepath)
+
+parMap :: (a -> b) -> [a] -> Eval [b]
+parMap _ [] = return []
+parMap f (a:as) = do
+   b <- rpar (f a)
+   bs <- parMap f as
+   return (b:bs)
