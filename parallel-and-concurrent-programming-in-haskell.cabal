@@ -14,10 +14,10 @@ maintainer:          dmbrooks@live.co.uk
 -- category:
 build-type:          Simple
 extra-source-files:  ChangeLog.md
-cabal-version:       >=1.10
+cabal-version:       >=2.0
 
 library
-  build-depends:       base >=4.8 && <4.9
+  build-depends:       base
                      , array
                      , protolude
                      , text
@@ -27,10 +27,21 @@ library
   extensions:          NoImplicitPrelude
   default-language:    Haskell2010
 
+executable kmeans
+  main-is:             Main.hs
+  ghc-options:         -O2 -Wall -Werror -threaded
+  build-depends:       base
+                     , parallel-and-concurrent-programming-in-haskell
+                     , protolude
+  hs-source-dirs:      kmeans
+  extensions:          NoImplicitPrelude
+                     , OverloadedStrings
+  default-language:    Haskell2010
+
 executable sudoku
   main-is:             Main.hs
   ghc-options:         -O2 -Wall -Werror -threaded
-  build-depends:       base >=4.8 && <4.9
+  build-depends:       base
                      , deepseq
                      , parallel
                      , parallel-and-concurrent-programming-in-haskell
