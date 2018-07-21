@@ -1,8 +1,10 @@
 module Sudoku (solve, printGrid) where
 
-import Data.List hiding (lookup)
-import Data.Array
-import Control.Monad
+import           Control.Monad
+import           Data.Array
+import qualified Data.List as L
+import qualified Data.Text as T
+import           Protolude
 
 -- Types
 type Digit  = Char
@@ -19,8 +21,11 @@ digits = "123456789"
 box :: ((Char, Char), (Char, Char))
 box = (('A','1'),('I','9'))
 
-cross :: String -> String -> [Square]
-cross rows cols = [ (r,c) | r <- rows, c <- cols ]
+cross :: [Char] -> [Char] -> [Square]
+cross rows cols = do
+  r <- rows
+  c <- cols
+  return (r,c)
 
 squares :: [Square]
 squares = cross rows digits  -- [('A','1'),('A','2'),('A','3'),...]
@@ -30,7 +35,7 @@ squares = cross rows digits  -- [('A','1'),('A','2'),('A','3'),...]
 peers :: Array Square [Square]
 peers = array box [(s, set (units!s)) | s <- squares ]
       where
-        set = nub . concat
+        set = L.nub . concat
 
 unitlist :: [Unit]
 unitlist = [ cross rows [c] | c <- digits ] ++
@@ -49,7 +54,7 @@ allPossibilities :: Grid
 allPossibilities = array box [ (s, digits) | s <- squares ]
 
 -- Parsing a grid into an Array
-parsegrid :: String -> Maybe Grid
+parsegrid :: [Char] -> Maybe Grid
 parsegrid g = do
   _ <- regularGrid
   foldM assign allPossibilities (zip squares g)
@@ -65,7 +70,7 @@ assign g (s,d) = if d `elem` digits
                  -- check that we are assigning a digit and not a '.'
                   then do
                     let ds = g ! s
-                        toDump = delete d ds
+                        toDump = L.delete d ds
                     foldM eliminate g (zip (repeat s) toDump)
                   else return g
 
@@ -74,7 +79,7 @@ eliminate g (s,d) =
   let cell = g ! s in
   if d `notElem` cell then return g -- already eliminated
   -- else d is deleted from s' values
-    else do let newCell = delete d cell
+    else do let newCell = L.delete d cell
                 newV = g // [(s,newCell)]
             newV2 <- case newCell of
             -- contradiction : Nothing terminates the computation
@@ -101,31 +106,32 @@ search g =
             ls -> do let (_,(s,ds)) = minimum ls
                      msum [assign g (s,d) >>= search | d <- ds]
 
-solve :: String -> Maybe Grid
-solve str = do
-  grd <- parsegrid str
-  search grd
+solve :: Text -> Maybe Grid
+solve = search <=< parsegrid . T.unpack
 
 -- Display solved grid
 printGrid :: Grid -> IO ()
 printGrid = putStrLn . gridToString
 
-gridToString :: Grid -> String
-gridToString g =
-  let l0 = elems g
-      -- [("1537"),("4"),...]   
-      l1 = (map (\s -> " " ++ s ++ " ")) l0
-      -- ["1 "," 2 ",...] 
-      l2 = (map concat . sublist 3) l1
-      -- ["1  2  3 "," 4  5  6 ", ...]
-      l3 = (sublist 3) l2
-      -- [["1  2  3 "," 4  5  6 "," 7  8  9 "],...] 
-      l4 = (map (concat . intersperse "|")) l3
-      -- ["1  2  3 | 4  5  6 | 7  8  9 ",...]
-      l5 = (concat . intersperse [line] . sublist 3) l4
-  in unlines l5 
-     where sublist _ [] = []
-           sublist n xs = ys : sublist n zs
-             where (ys,zs) = splitAt n xs
-           line = hyphens ++ "+" ++ hyphens ++ "+" ++ hyphens
-           hyphens = replicate 9 '-'
+gridToString :: Grid -> Text
+gridToString g = T.pack $ L.unlines l5
+  where
+    l0 = elems g
+    -- [("1537"),("4"),...]
+    l1 = (map (\s -> " " ++ s ++ " ")) l0
+    -- ["1 "," 2 ",...]
+    l2 = (map concat . sublist 3) l1
+    -- ["1  2  3 "," 4  5  6 ", ...]
+    l3 = (sublist 3) l2
+    -- [["1  2  3 "," 4  5  6 "," 7  8  9 "],...]
+    l4 = (map (concat . intersperse "|")) l3
+    -- ["1  2  3 | 4  5  6 | 7  8  9 ",...]
+    l5 = (concat . intersperse [line] . sublist 3) l4
+    line = hyphens ++ "+" ++ hyphens ++ "+" ++ hyphens
+    hyphens = replicate 9 '-'
+
+sublist :: Int -> [a] -> [[a]]
+sublist _ [] = []
+sublist n xs = ys : sublist n zs
+  where
+    (ys,zs) = splitAt n xs

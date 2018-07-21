@@ -3,9 +3,9 @@ module Main where
 import           Control.Monad
 import           Control.Parallel.Strategies hiding (parMap)
 import qualified Data.Maybe as M
-import           Data.Monoid ((<>))
+import qualified Data.Text as T
+import           Protolude
 import           Sudoku
-import           System.Environment
 
 data ExecutionMode
   = ExecPar
@@ -20,8 +20,8 @@ main = do
     attemptRun execMode filepath =
       case (execMode, filepath) of
         (Just mode, Just file) -> sudoku mode file
-        (Nothing, _) -> putStrLn "Please provide valid execution mode: 'par' / 'seq'"
-        _ -> putStrLn "Please choose a file, 1000 / 16000 / 49151"
+        (Nothing, _) -> putText "Please provide valid execution mode: 'par' / 'seq'"
+        _ -> putText "Please choose a file, 1000 / 16000 / 49151"
 
     getExecMode =
       (parseExecMode <=< M.listToMaybe) <$> getArgs
@@ -40,7 +40,7 @@ main = do
         "49151" -> Just "49151"
         _ -> Nothing
 
-sudoku :: ExecutionMode -> String -> IO ()
+sudoku :: ExecutionMode -> Text -> IO ()
 sudoku execMode filepath = readPuzzles >>= displayResults . determineMode
   where
     determineMode =
@@ -58,7 +58,7 @@ sudoku execMode filepath = readPuzzles >>= displayResults . determineMode
       print . length . filter M.isJust
 
     readPuzzles =
-      lines <$> readFile ("sudoku/data/" <> filepath)
+      T.lines <$> (readFile . T.unpack $ "sudoku/data/" <> filepath)
 
 parMap :: (a -> b) -> [a] -> Eval [b]
 parMap _ [] = return []
