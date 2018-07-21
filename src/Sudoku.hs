@@ -60,9 +60,12 @@ parsegrid g = do
   foldM assign allPossibilities (zip squares g)
   where
     regularGrid =
-      if all (`elem` "0.-123456789") g
+      if all (`elem` validChars) g
          then Just g
          else Nothing
+
+    validChars =
+      "0.-123456789" :: [Char]
 
 -- Propagating Constraints
 assign        :: Grid -> (Square, Digit) -> Maybe Grid

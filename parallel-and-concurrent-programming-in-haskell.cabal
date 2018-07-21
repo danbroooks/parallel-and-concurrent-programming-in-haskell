@@ -18,24 +18,37 @@ cabal-version:       >=2.0
 
 library
   build-depends:       base
+                     , aeson
                      , array
                      , protolude
+                     , random
                      , text
                      , time
   hs-source-dirs:      src
-  exposed-modules:     Sudoku
+  exposed-modules:     Kmeans
+                     , Sudoku
+  other-modules:       Random
   extensions:          NoImplicitPrelude
+                     , OverloadedStrings
+                     , RecordWildCards
   default-language:    Haskell2010
 
 executable kmeans
   main-is:             Main.hs
   ghc-options:         -O2 -Wall -Werror -threaded
   build-depends:       base
+                     , aeson
                      , parallel-and-concurrent-programming-in-haskell
                      , protolude
+                     , servant
+                     , servant-server
+                     , warp
   hs-source-dirs:      kmeans
-  extensions:          NoImplicitPrelude
+  extensions:          DataKinds
+                     , NoImplicitPrelude
                      , OverloadedStrings
+                     , RecordWildCards
+                     , TypeOperators
   default-language:    Haskell2010
 
 executable sudoku
