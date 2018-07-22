@@ -2,6 +2,7 @@ module Kmeans
   ( KmeansState
   , initialState
   , randomState
+  , iterateKmeans
   ) where
 
 import           Data.Aeson.Types
@@ -19,6 +20,7 @@ data Colour
   | Blue
   | Purple
   | Teal
+  deriving (Show, Eq)
 
 instance ToJSON Colour where
   toJSON None = "transparent"
@@ -49,14 +51,15 @@ instance ToJSON Point where
            , "stroke" .= stroke
            ]
 
-pointDistance :: Point -> Point -> Int
-pointDistance a b = xs + ys
-  where
-    xs =
-      (pointX a - pointX b) ^ 2
+pointDistance :: Point -> Point -> (Int, Int)
+pointDistance a b = (pointX a - pointX b, pointY a - pointY b)
 
-    ys =
-      (pointY a - pointY b) ^ 2
+pointCoords :: Point -> (Int, Int)
+pointCoords Point{..} = (pointX, pointY)
+
+movePoint :: (Int, Int) -> Point -> Point
+movePoint (x', y') (Point r x y fill stroke) =
+  Point r (x + x') (y + y') fill stroke
 
 data KmeansState = KmeansState
   { kmeansStateClusters :: [Point]
@@ -70,22 +73,22 @@ instance ToJSON KmeansState where
            ]
 
 width :: Int
-width = 800
+width = 1000
 
 height :: Int
-height = 600
+height = 700
 
 centreX :: Int
 centreX = width `div` 2
 
 offsetX :: Int
-offsetX = 2 * (centreX `div` 3)
+offsetX = 3 * (centreX `div` 4)
 
 centreY :: Int
 centreY = height `div` 2
 
 offsetY :: Int
-offsetY = 2 * (centreY `div` 3)
+offsetY = 3 * (centreY `div` 4)
 
 initialState :: MonadIO m => Int -> Int -> m KmeansState
 initialState nClusters nCentroids = runRandomT createState =<< seedFromTime
@@ -121,7 +124,7 @@ initialClusters :: MonadIO m => Int -> RandomT m [Point]
 initialClusters numClusters = join <$> replicateM numClusters randomCluster
   where
     totalPoints =
-      300
+      500
 
     perCluster =
       totalPoints `div` numClusters
@@ -178,7 +181,50 @@ assignClusters KmeansState{..} = KmeansState clusters kmeansStateCentroids
       Point r x y fill stroke
 
     nearestColour pt =
-      pointFill $ minimumBy (compare `on` pointDistance pt) kmeansStateCentroids
+      pointFill $ minimumBy (compare `on` calcDistance pt) kmeansStateCentroids
+
+    calcDistance a b = (xs ^ 2) + (ys ^ 2)
+      where
+        (xs, ys) = pointDistance a b
+
+iterateKmeans :: KmeansState -> KmeansState
+iterateKmeans KmeansState{..} = assignClusters $ KmeansState kmeansStateClusters centroids
+  where
+    centroids =
+      (\c -> shiftCentroid (matchingClusters c) c) <$> kmeansStateCentroids
+
+    matchingClusters c =
+      filter (matchingCluster c) kmeansStateClusters
+
+    matchingCluster centroid point =
+      pointFill centroid == pointFill point
+
+shiftCentroid :: [Point] -> Point -> Point
+shiftCentroid cluster centroid = maybe centroid (performShift . calculateShift . pointCoords) firstPoint
+  where
+    firstPoint =
+      listToMaybe cluster
+
+    performShift shift =
+      movePoint shift centroid
+
+    calculateShift initialCoords =
+      reduceTuple 2 . centroidDistance . reduceTuple (length cluster) . foldr takeAverage (0, 0) $ cluster
+
+    takeAverage point acc =
+      sumTuples acc . pointCoords $ point
+
+    centroidDistance avg =
+      subTuples avg (pointCoords centroid)
+
+    reduceTuple n (x, y) =
+      (x `div` n, y `div` n)
+
+    sumTuples (ax, ay) (bx, by) =
+      (ax + bx, ay + by)
+
+    subTuples (ax, ay) (bx, by) =
+      (ax - bx, ay - by)
 
 randomClusterOrigin :: MonadIO m => RandomT m Point
 randomClusterOrigin = generate

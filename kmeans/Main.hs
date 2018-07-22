@@ -7,7 +7,7 @@ import Types
 
 type Kmeans = Api :<|> Raw
 
-type Api = GetPage :<|> ResetPage
+type Api = GetPage :<|> PostPage :<|> ResetPage
 
 type App = ReaderT (MVar Page)
 
@@ -25,6 +25,11 @@ type GetPage = "state" :> Get '[JSON] Page
 getPage :: App Handler Page
 getPage = retrievePage
 
+type PostPage = "state" :> Post '[JSON] Page
+
+postPage :: App Handler Page
+postPage = alterPage performStep
+
 type ResetPage = "reset" :> Post '[JSON] Page
 
 resetPage :: App Handler Page
@@ -40,7 +45,7 @@ handlers :: ServerT Kmeans (App Handler)
 handlers = api :<|> serveDirectoryFileServer "./kmeans/assets"
   where
     api =
-      getPage :<|> resetPage
+      getPage :<|> postPage :<|> resetPage
 
 server :: MVar Page -> Server Kmeans
 server page = hoistServer everything (flip runReaderT page) handlers

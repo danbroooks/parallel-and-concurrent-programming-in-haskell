@@ -44,17 +44,11 @@ const setup = div => {
     .on('click', () => reset(api))
   );
 
-  const updateButton = (
-    controls.append('button')
-    .text('Update')
-    .on('click', () => update(api))
-  );
-
   const svg = (
     chart.append('svg')
     .attr('id', 'clusters')
-    .attr('width', 800)
-    .attr('height', 600)
+    .attr('width', 1000)
+    .attr('height', 700)
   );
 
   const clusters = (
@@ -75,6 +69,7 @@ const setup = div => {
     .enter()
     .append('circle')
     .merge(circles)
+    .transition().duration(1000)
     .attr('r', ({ r }) => r)
     .attr('cx', ({ x }) => x)
     .attr('cy', ({ y }) => y)
@@ -98,8 +93,21 @@ const render = page => ({ title, state }) => {
   page.renderCentroids(state.centroids);
 };
 
+const start = page => {
+  update(page);
+  loop(page);
+};
+
+const loop = page =>
+  step(page)
+    .then(() => after(1000))
+    .then(() => loop(page));
+
 const update = page =>
   get('/state').then(render(page));
+
+const step = page =>
+  post('/state').then(render(page));
 
 const reset = page => {
   page.disableControls();
@@ -110,7 +118,7 @@ const reset = page => {
 };
 
 document.addEventListener('DOMContentLoaded', () =>
-  update(
+  start(
     setup(d3.selectAll('#kmeans'))
   )
 );

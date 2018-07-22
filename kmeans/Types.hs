@@ -20,3 +20,6 @@ initialPage = Page title <$> randomState
   where
     title =
       "kmeans - Parallel and Concurrent Programming in Haskell"
+
+performStep :: Page -> Page
+performStep (Page t s) = Page t $ iterateKmeans s
