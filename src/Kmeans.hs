@@ -12,19 +12,25 @@ data Colour
   = None
   | White
   | Black
+  | Grey
   | Red
   | Green
-  | Blue
   | Orange
+  | Blue
+  | Purple
+  | Teal
 
 instance ToJSON Colour where
   toJSON None = "transparent"
-  toJSON White = "#ffffff"
-  toJSON Black = "#000000"
-  toJSON Red = "#d62728"
-  toJSON Green = "#2ca02c"
-  toJSON Blue = "#1f77b4"
-  toJSON Orange = "#ff7f0e"
+  toJSON White = "#ecf0f1"
+  toJSON Black = "#2c3e50"
+  toJSON Grey = "#34495e"
+  toJSON Red = "#c13f2b"
+  toJSON Green = "#55af61"
+  toJSON Orange = "#f39c28"
+  toJSON Blue = "#2980b9"
+  toJSON Purple = "#8f50ad"
+  toJSON Teal = "#49a185"
 
 data Point = Point
   { pointR :: Int
@@ -42,6 +48,15 @@ instance ToJSON Point where
            , "fill" .= fill
            , "stroke" .= stroke
            ]
+
+pointDistance :: Point -> Point -> Int
+pointDistance a b = xs + ys
+  where
+    xs =
+      (pointX a - pointX b) ^ 2
+
+    ys =
+      (pointY a - pointY b) ^ 2
 
 data KmeansState = KmeansState
   { kmeansStateClusters :: [Point]
@@ -76,8 +91,23 @@ initialState :: MonadIO m => Int -> Int -> m KmeansState
 initialState nClusters nCentroids = runRandomT createState =<< seedFromTime
   where
     createState =
+      assignClusters <$> generateState
+
+    generateState =
       KmeansState <$> initialClusters nClusters
-                  <*> replicateM nCentroids randomCentroid
+                  <*> initialCentroids
+
+    initialCentroids =
+      mapM randomCentroid $ take nCentroids centroidColours
+
+    centroidColours =
+      [ Red
+      , Green
+      , Orange
+      , Blue
+      , Purple
+      , Teal
+      ]
 
 randomState :: MonadIO m => m KmeansState
 randomState = runRandomT createState =<< seedFromTime
@@ -138,6 +168,18 @@ generateCluster numPoints pt = generate
     recurr =
       generateCluster (numPoints - 1) pt
 
+assignClusters :: KmeansState -> KmeansState
+assignClusters KmeansState{..} = KmeansState clusters kmeansStateCentroids
+  where
+    clusters =
+      (\pt -> assignColour (nearestColour pt) pt) <$> kmeansStateClusters
+
+    assignColour fill (Point r x y _ stroke) =
+      Point r x y fill stroke
+
+    nearestColour pt =
+      pointFill $ minimumBy (compare `on` pointDistance pt) kmeansStateCentroids
+
 randomClusterOrigin :: MonadIO m => RandomT m Point
 randomClusterOrigin = generate
   where
@@ -148,10 +190,10 @@ randomClusterOrigin = generate
             <*> pure Red
             <*> pure None
 
-randomCentroid :: MonadIO m => RandomT m Point
-randomCentroid =
+randomCentroid :: MonadIO m => Colour -> RandomT m Point
+randomCentroid colour =
   Point <$> pure 5
         <*> randomR (centreX - offsetX, centreX + offsetX)
         <*> randomR (centreY - offsetY, centreY + offsetY)
-        <*> pure White
+        <*> pure colour
         <*> pure Black
