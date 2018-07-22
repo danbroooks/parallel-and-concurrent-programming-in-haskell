@@ -1,6 +1,7 @@
 module Kmeans
   ( KmeansState
   , initialState
+  , randomState
   ) where
 
 import           Data.Aeson.Types
@@ -54,40 +55,103 @@ instance ToJSON KmeansState where
            ]
 
 width :: Int
-width = 400
+width = 800
 
 height :: Int
-height = 300
+height = 600
 
-initialState :: MonadIO m => m KmeansState
-initialState = runRandomT createState =<< seedFromTime
+centreX :: Int
+centreX = width `div` 2
+
+offsetX :: Int
+offsetX = 2 * (centreX `div` 3)
+
+centreY :: Int
+centreY = height `div` 2
+
+offsetY :: Int
+offsetY = 2 * (centreY `div` 3)
+
+initialState :: MonadIO m => Int -> Int -> m KmeansState
+initialState nClusters nCentroids = runRandomT createState =<< seedFromTime
   where
     createState =
-      KmeansState <$> initialClusters
-                  <*> initialCentroids
+      KmeansState <$> initialClusters nClusters
+                  <*> replicateM nCentroids randomCentroid
 
-initialClusters :: MonadIO m => RandomT m [Point]
-initialClusters = sequence (replicate n . randomCluster =<< colours)
+randomState :: MonadIO m => m KmeansState
+randomState = runRandomT createState =<< seedFromTime
   where
-    n = 20
+    createState = do
+      clusters <- randomR (2, 5)
+      centroids <- randomR (2, 5)
+      initialState clusters centroids
 
-    colours =
-      [ Red
-      , Green
-      , Blue
-      , Orange
-      ]
+initialClusters :: MonadIO m => Int -> RandomT m [Point]
+initialClusters numClusters = join <$> replicateM numClusters randomCluster
+  where
+    totalPoints =
+      300
 
-    randomCluster colour =
+    perCluster =
+      totalPoints `div` numClusters
+
+    randomCluster =
+      generateCluster (perCluster - 1) =<< randomClusterOrigin
+
+generateCluster :: MonadIO m => Int -> Point -> RandomT m [Point]
+generateCluster numPoints pt = generate
+  where
+    generate =
+      if numPoints == 0 then pure [pt]
+                        else (:) <$> groupedPoint <*> recurr
+
+    originX =
+      pointX pt
+
+    originY =
+      pointY pt
+
+    spreadX =
+      width `div` numPoints * 3
+
+    spreadY =
+      height `div` numPoints * 3
+
+    xR =
+      ( max 1 $ originX - spreadX
+      , min width $ originX + spreadX
+      )
+
+    yR =
+      ( max 1 $ originY - spreadY
+      , min height $ originY + spreadY
+      )
+
+    groupedPoint =
       Point <$> pure 2
-            <*> randomR (1, width)
-            <*> randomR (1, height)
-            <*> pure colour
+            <*> randomR xR
+            <*> randomR yR
+            <*> pure Red
             <*> pure None
 
-initialCentroids :: MonadIO m => RandomT m [Point]
-initialCentroids = sequence $ do
-  replicate 3 randomCentroid
+    recurr =
+      generateCluster (numPoints - 1) pt
+
+randomClusterOrigin :: MonadIO m => RandomT m Point
+randomClusterOrigin = generate
+  where
+    generate =
+      Point <$> pure 2
+            <*> randomR (centreX - offsetX, centreX + offsetX)
+            <*> randomR (centreY - offsetY, centreY + offsetY)
+            <*> pure Red
+            <*> pure None
 
 randomCentroid :: MonadIO m => RandomT m Point
-randomCentroid = pure (Point 3 20 20 None Black)
+randomCentroid =
+  Point <$> pure 5
+        <*> randomR (centreX - offsetX, centreX + offsetX)
+        <*> randomR (centreY - offsetY, centreY + offsetY)
+        <*> pure White
+        <*> pure Black

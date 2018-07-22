@@ -1,27 +1,13 @@
 module Main where
 
-import Data.Aeson.Types
-import Kmeans
 import Network.Wai.Handler.Warp
 import Protolude
 import Servant
+import Types
 
 type Kmeans = Api :<|> Raw
 
-type Api = GetState
-
-type GetState = "state" :> Get '[JSON] Page
-
-data Page = Page
-  { pageTitle :: Text
-  , pageState :: KmeansState
-  }
-
-instance ToJSON Page where
-  toJSON Page{..} =
-    object [ "title" .= pageTitle
-           , "state" .= pageState
-           ]
+type Api = GetPage :<|> ResetPage
 
 type App = ReaderT (MVar Page)
 
@@ -34,20 +20,27 @@ alterPage f = ask >>= liftIO . \memory -> do
 retrievePage :: MonadIO m => App m Page
 retrievePage = liftIO . readMVar =<< ask
 
-initialPage :: MonadIO m => m Page
-initialPage = Page title <$> initialState
-  where
-    title =
-      "kmeans - Parallel and Concurrent Programming in Haskell"
+type GetPage = "state" :> Get '[JSON] Page
 
 getPage :: App Handler Page
 getPage = retrievePage
+
+type ResetPage = "reset" :> Post '[JSON] Page
+
+resetPage :: App Handler Page
+resetPage = alterPage =<< reset
+  where
+    reset =
+      const <$> initialPage
 
 everything :: Proxy Kmeans
 everything = Proxy
 
 handlers :: ServerT Kmeans (App Handler)
-handlers = getPage :<|> serveDirectoryFileServer "./kmeans/assets"
+handlers = api :<|> serveDirectoryFileServer "./kmeans/assets"
+  where
+    api =
+      getPage :<|> resetPage
 
 server :: MVar Page -> Server Kmeans
 server page = hoistServer everything (flip runReaderT page) handlers
