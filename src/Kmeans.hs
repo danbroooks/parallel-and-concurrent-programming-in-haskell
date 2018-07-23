@@ -97,7 +97,7 @@ initialState nClusters nCentroids = runRandomT createState =<< seedFromTime
       assignClusters <$> generateState
 
     generateState =
-      KmeansState <$> initialClusters nClusters
+      KmeansState <$> (initialClusters nClusters =<< randomR (400, 1200))
                   <*> initialCentroids
 
     initialCentroids =
@@ -120,17 +120,23 @@ randomState = runRandomT createState =<< seedFromTime
       centroids <- randomR (2, 5)
       initialState clusters centroids
 
-initialClusters :: MonadIO m => Int -> RandomT m [Point]
-initialClusters numClusters = join <$> replicateM numClusters randomCluster
+initialClusters :: MonadIO m => Int -> Int -> RandomT m [Point]
+initialClusters numClusters totalPoints = (<>) <$> noise <*> clusters
   where
-    totalPoints =
-      500
-
     perCluster =
-      totalPoints `div` numClusters
+      totalPoints `div` (numClusters + 2)
+
+    numNoisePoints =
+      totalPoints - (perCluster * numClusters)
 
     randomCluster =
-      generateCluster (perCluster - 1) =<< randomClusterOrigin
+      generateCluster (perCluster - 1) =<< randomPoint
+
+    clusters =
+      join <$> replicateM numClusters randomCluster
+
+    noise =
+      replicateM numNoisePoints randomPoint
 
 generateCluster :: MonadIO m => Int -> Point -> RandomT m [Point]
 generateCluster numPoints pt = generate
@@ -209,7 +215,7 @@ shiftCentroid cluster centroid = maybe centroid (performShift . calculateShift .
       movePoint shift centroid
 
     calculateShift initialCoords =
-      reduceTuple 2 . centroidDistance . reduceTuple (length cluster) . foldr takeAverage (0, 0) $ cluster
+      centroidDistance . reduceTuple (length cluster) . foldr takeAverage (0, 0) $ cluster
 
     takeAverage point acc =
       sumTuples acc . pointCoords $ point
@@ -226,14 +232,14 @@ shiftCentroid cluster centroid = maybe centroid (performShift . calculateShift .
     subTuples (ax, ay) (bx, by) =
       (ax - bx, ay - by)
 
-randomClusterOrigin :: MonadIO m => RandomT m Point
-randomClusterOrigin = generate
+randomPoint :: MonadIO m => RandomT m Point
+randomPoint = generate
   where
     generate =
       Point <$> pure 2
             <*> randomR (centreX - offsetX, centreX + offsetX)
             <*> randomR (centreY - offsetY, centreY + offsetY)
-            <*> pure Red
+            <*> pure None
             <*> pure None
 
 randomCentroid :: MonadIO m => Colour -> RandomT m Point
