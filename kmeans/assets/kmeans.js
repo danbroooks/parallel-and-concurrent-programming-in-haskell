@@ -28,6 +28,8 @@ const handleResponse = xhr => new Promise((res, rej) => {
 const after = ms => new Promise((res) => setTimeout(res, ms));
 
 const setup = div => {
+  let transitions = false;
+
   const chart = (
     div.append('div')
     .attr('class', 'chart')
@@ -69,7 +71,7 @@ const setup = div => {
     .enter()
     .append('circle')
     .merge(circles)
-    .transition().duration(1000)
+    .transition().duration(transitions ? 1000 : 0)
     .attr('r', ({ r }) => r)
     .attr('cx', ({ x }) => x)
     .attr('cy', ({ y }) => y)
@@ -82,6 +84,7 @@ const setup = div => {
     renderCentroids: data => renderCircles(centroids, data),
     disableControls: () => controls.selectAll('button').attr('disabled', true),
     enableControls: () => controls.selectAll('button').attr('disabled', null),
+    enableTransitions: () => (transitions = true),
   };
 
   return api;
@@ -94,8 +97,10 @@ const render = page => ({ title, state }) => {
 };
 
 const start = page => {
-  update(page);
-  loop(page);
+  update(page).then(() => {
+    page.enableTransitions();
+    loop(page);
+  });
 };
 
 const loop = page =>
@@ -112,8 +117,6 @@ const step = page =>
 const reset = page => {
   page.disableControls();
   Promise.all([ post('/reset'), after(200) ])
-    .then(([ data ]) => data)
-    .then(render(page))
     .then(() => page.enableControls());
 };
 
