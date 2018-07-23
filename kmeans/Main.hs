@@ -11,14 +11,14 @@ type Api = GetPage :<|> PostPage :<|> ResetPage
 
 type App = ReaderT (MVar Page)
 
-alterPage :: MonadIO m => (Page -> Page) -> App m Page
-alterPage f = ask >>= liftIO . \memory -> do
-  read <- f <$> takeMVar memory
-  putMVar memory read
+mapMVar :: MonadIO m => (a -> m a) -> MVar a -> m a
+mapMVar f m = do
+  read <- f =<< liftIO (takeMVar m)
+  liftIO (putMVar m read)
   return read
 
 retrievePage :: MonadIO m => App m Page
-retrievePage = liftIO . readMVar =<< ask
+retrievePage = ask >>= liftIO . readMVar
 
 type GetPage = "state" :> Get '[JSON] Page
 
@@ -28,15 +28,12 @@ getPage = retrievePage
 type PostPage = "state" :> Post '[JSON] Page
 
 postPage :: App Handler Page
-postPage = alterPage performStep
+postPage = ask >>= liftIO . mapMVar performStep
 
 type ResetPage = "reset" :> Post '[JSON] Page
 
 resetPage :: App Handler Page
-resetPage = alterPage =<< reset
-  where
-    reset =
-      const <$> initialPage
+resetPage = ask >>= liftIO . mapMVar (const initialPage)
 
 everything :: Proxy Kmeans
 everything = Proxy

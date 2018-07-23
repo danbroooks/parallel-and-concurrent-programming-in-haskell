@@ -21,5 +21,5 @@ initialPage = Page title <$> randomState
     title =
       "kmeans - Parallel and Concurrent Programming in Haskell"
 
-performStep :: Page -> Page
-performStep (Page t s) = Page t $ iterateKmeans s
+performStep :: MonadIO m => Page -> m Page
+performStep (Page t s) = return $ Page t $ iterateKmeans s
