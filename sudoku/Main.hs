@@ -1,10 +1,9 @@
 module Main where
 
-import           Control.Monad
 import           Control.Parallel.Strategies hiding (parMap)
-import qualified Data.Maybe as M
 import qualified Data.Text as T
-import           Protolude
+import           Prelude
+import qualified Prelude.List as L
 import           Sudoku
 
 data ExecutionMode
@@ -24,10 +23,10 @@ main = do
         _ -> putText "Please choose a file, 1000 / 16000 / 49151"
 
     getExecMode =
-      (parseExecMode <=< M.listToMaybe) <$> getArgs
+      (parseExecMode <=< L.head) <$> getArgs
 
     getFilepath =
-      (parseFilepath <=< M.listToMaybe . drop 1) <$> getArgs
+      (parseFilepath <=< L.head . drop 1) <$> getArgs
 
     parseExecMode "par" = Just ExecPar
     parseExecMode "seq" = Just ExecSeq
@@ -55,7 +54,7 @@ sudoku execMode filepath = readPuzzles >>= displayResults . determineMode
       fmap solve
 
     displayResults =
-      print . length . filter M.isJust
+      print . length . filter isJust
 
     readPuzzles =
       T.lines <$> (readFile . T.unpack $ "sudoku/data/" <> filepath)

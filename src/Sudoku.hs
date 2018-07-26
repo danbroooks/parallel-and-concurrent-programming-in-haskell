@@ -1,10 +1,9 @@
 module Sudoku (solve, printGrid) where
 
-import           Control.Monad
 import           Data.Array
-import qualified Data.List as L
 import qualified Data.Text as T
-import           Protolude
+import           Prelude
+import qualified Prelude.List as L
 
 -- Types
 type Digit  = Char
@@ -35,7 +34,7 @@ squares = cross rows digits  -- [('A','1'),('A','2'),('A','3'),...]
 peers :: Array Square [Square]
 peers = array box [(s, set (units!s)) | s <- squares ]
       where
-        set = L.nub . concat
+        set = L.ordNub . concat
 
 unitlist :: [Unit]
 unitlist = [ cross rows [c] | c <- digits ] ++
@@ -60,9 +59,13 @@ parsegrid g = do
   foldM assign allPossibilities (zip squares g)
   where
     regularGrid =
-      if all (`elem` "0.-123456789") g
+      if all (`elem` validChars) g
          then Just g
          else Nothing
+
+    validChars :: [Char]
+    validChars =
+      "0.-123456789"
 
 -- Propagating Constraints
 assign        :: Grid -> (Square, Digit) -> Maybe Grid
@@ -70,7 +73,7 @@ assign g (s,d) = if d `elem` digits
                  -- check that we are assigning a digit and not a '.'
                   then do
                     let ds = g ! s
-                        toDump = L.delete d ds
+                        toDump = L.remove d ds
                     foldM eliminate g (zip (repeat s) toDump)
                   else return g
 
@@ -79,7 +82,7 @@ eliminate g (s,d) =
   let cell = g ! s in
   if d `notElem` cell then return g -- already eliminated
   -- else d is deleted from s' values
-    else do let newCell = L.delete d cell
+    else do let newCell = L.remove d cell
                 newV = g // [(s,newCell)]
             newV2 <- case newCell of
             -- contradiction : Nothing terminates the computation
@@ -114,7 +117,7 @@ printGrid :: Grid -> IO ()
 printGrid = putStrLn . gridToString
 
 gridToString :: Grid -> Text
-gridToString g = T.pack $ L.unlines l5
+gridToString g = T.unlines $ T.pack <$> l5
   where
     l0 = elems g
     -- [("1537"),("4"),...]
