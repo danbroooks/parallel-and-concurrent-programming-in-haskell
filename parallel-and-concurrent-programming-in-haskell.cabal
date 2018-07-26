@@ -4,28 +4,26 @@
 
 name:                parallel-and-concurrent-programming-in-haskell
 version:             0.1.0.0
--- synopsis:
--- description:
 license:             MIT
 license-file:        LICENSE
 author:              Dan Brooks
 maintainer:          dmbrooks@live.co.uk
--- copyright:
--- category:
 build-type:          Simple
 extra-source-files:  ChangeLog.md
 cabal-version:       >=2.0
 
 library
-  build-depends:       base
-                     , aeson
+  build-depends:       aeson
                      , array
+                     , base
                      , protolude
                      , random
                      , text
                      , time
   hs-source-dirs:      src
   exposed-modules:     Kmeans
+                     , Prelude
+                     , Prelude.List
                      , Sudoku
   other-modules:       Random
   extensions:          NoImplicitPrelude
@@ -54,8 +52,7 @@ executable kmeans
 executable sudoku
   main-is:             Main.hs
   ghc-options:         -O2 -Wall -Werror -threaded
-  build-depends:       base
-                     , deepseq
+  build-depends:       deepseq
                      , parallel
                      , parallel-and-concurrent-programming-in-haskell
                      , protolude
