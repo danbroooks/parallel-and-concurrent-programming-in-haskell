@@ -26,25 +26,35 @@ instance Binary Msg
 pingServer :: Process ()
 pingServer = do
   Ping from <- expect
-  say $ "Ping received from " <> (show from)
+  say $ "Ping received from " <> show from
   send from . Pong =<< getSelfPid
 
 remotable ['pingServer]
 
-master :: Process ()
-master = do
-  node <- getSelfNode
-  say $ "Spawning on " <> show node
-  pid <- spawn node $(mkStaticClosure 'pingServer)
-  say $ "Sending ping to " <> show pid
-  send pid . Ping =<< getSelfPid
-  Pong _ <- expect
-  say "Pong"
+master :: [NodeId] -> Process ()
+master peers = do
+  ps <- forM peers $ \nid -> do
+    say $ "Spawning on " <> show nid
+    spawn nid $(mkStaticClosure 'pingServer)
+  mypid <- getSelfPid
+  forM_ ps $ \pid -> do
+    say $ "Pinging " <> show pid
+    send pid (Ping mypid)
+  waitForPongs ps
+  say "All pongs successfully received"
   terminate
+
+waitForPongs :: [ProcessId] -> Process ()
+waitForPongs [] = return ()
+waitForPongs ps = do
+  m <- expect
+  case m of
+    Pong p -> waitForPongs (filter (/= p) ps)
+    _ -> say "MASTER received ping" >> terminate
 
 start :: RunningMode -> Text -> Text -> IO ()
 start mode host port = do
   backend <- initializeBackend (T.unpack host) (T.unpack port) (__remoteTable initRemoteTable)
   case mode of
-    Master -> startMaster backend (\_ -> master)
+    Master -> startMaster backend master
     Slave -> startSlave backend
