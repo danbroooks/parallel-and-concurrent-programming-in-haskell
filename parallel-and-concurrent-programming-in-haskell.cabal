@@ -15,15 +15,22 @@ cabal-version:       >=1.10
 library
   build-depends:       array
                      , base
+                     , binary
+                     , distributed-process
+                     , distributed-process-simplelocalnet
+                     , distributed-static
                      , protolude
                      , text
                      , time
   hs-source-dirs:      src
-  exposed-modules:     Prelude
+  exposed-modules:     Pings
+                     , Prelude
                      , Prelude.List
                      , Sudoku
-  extensions:          NoImplicitPrelude
+  default-extensions:  DeriveGeneric
+                     , NoImplicitPrelude
                      , OverloadedStrings
+                     , TemplateHaskell
   default-language:    Haskell2010
 
 executable sudoku
@@ -35,6 +42,16 @@ executable sudoku
                      , protolude
                      , text
   hs-source-dirs:      sudoku
-  extensions:          NoImplicitPrelude
+  default-extensions:  NoImplicitPrelude
+                     , OverloadedStrings
+  default-language:    Haskell2010
+
+executable pings
+  main-is:             Main.hs
+  ghc-options:         -O2 -Wall -Werror -threaded
+  build-depends:       parallel-and-concurrent-programming-in-haskell
+                     , protolude
+  hs-source-dirs:      pings
+  default-extensions:  NoImplicitPrelude
                      , OverloadedStrings
   default-language:    Haskell2010
